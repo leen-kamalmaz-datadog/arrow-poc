@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option go_package = "leen-grpc/icecreamservice";
+
+package icecreamservice;
+
+service IceCreamService {
+  rpc GetFlavorDetails (GetFlavorDetailsRequest) returns (GetFlavorDetailsResponse);
+}
+
+message FlavorDetail {
+  string name = 1;
+  string description = 2;
+  string base_type = 3;
+  bool includes_nuts = 4;
+  optional int32 popularity_rating = 5;
+}
+
+message GetFlavorDetailsRequest {
+  repeated string names = 1;
+}
+
+message GetFlavorDetailsResponse {
+  map<string, FlavorDetail> flavors = 1;
+}
