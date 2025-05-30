@@ -6,6 +6,7 @@ package icecreamservice;
 
 service IceCreamService {
   rpc GetFlavorDetails (GetFlavorDetailsRequest) returns (GetFlavorDetailsResponse);
+  rpc GetFlavorDetailsArrow(GetFlavorDetailsRequest) returns (GetFlavorDetailsArrowResponse);
 }
 
 message FlavorDetail {
@@ -22,4 +23,8 @@ message GetFlavorDetailsRequest {
 
 message GetFlavorDetailsResponse {
   map<string, FlavorDetail> flavors = 1;
+}
+
+message GetFlavorDetailsArrowResponse {
+  bytes arrow_data = 1; // This will hold the serialized Arrow RecordBatch(es)
 }
