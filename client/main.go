@@ -1,20 +1,23 @@
 package main
 
 import (
-    "context"
-	"time"
-    "fmt"
-	"io"
-    "log"
 	"bytes"
+	"context"
+	"fmt"
+	"io"
+	"log"
+	"time"
 
-    "google.golang.org/grpc"
-    "google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/proto"
 
-	"github.com/apache/arrow/go/v16/arrow/array"	// For specific array types
-	"github.com/apache/arrow/go/v16/arrow/ipc"		// For IPC reader
-	"github.com/apache/arrow/go/v16/arrow/memory"	// For memory allocator
-	
+	"github.com/apache/arrow/go/v16/arrow/array"
+	"github.com/apache/arrow/go/v16/arrow/flight"
+
+	"github.com/apache/arrow/go/v16/arrow/ipc"
+	"github.com/apache/arrow/go/v16/arrow/memory"
+
 	pb "leen-grpc/icecreamservice"
 )
 
@@ -34,7 +37,7 @@ func processAndPrintArrowData(arrowData []byte) error {
 	for arrowReader.Next() {
 		record := arrowReader.Record()
 		recordCount++
-		log.Printf("Processing Arrow RecordBatch %d with %d rows and %d columns.", recordCount, record.NumRows(), record.NumCols())
+		fmt.Printf("Processing Arrow RecordBatch %d with %d rows and %d columns.\n", recordCount, record.NumRows(), record.NumCols())
 
 		// expecting schema: name (string), description (string), base_type (string), includes_nuts (bool), popularity_rating (int32, nullable)
 		// can also get the schema dynamically: schema := record.Schema()
@@ -47,15 +50,15 @@ func processAndPrintArrowData(arrowData []byte) error {
 
 		for i := 0; i < int(record.NumRows()); i++ {
 			fmt.Println("------------------------------------")
-			log.Printf("Flavor:          %s", nameCol.Value(i))
-			log.Printf("Description:     %s", descriptionCol.Value(i))
-			log.Printf("Base Type:       %s", baseTypeCol.Value(i))
-			log.Printf("Includes Nuts:   %t", includesNutsCol.Value(i))
+			fmt.Printf("Flavor:          %s\n", nameCol.Value(i))
+			fmt.Printf("Description:     %s\n", descriptionCol.Value(i))
+			fmt.Printf("Base Type:       %s\n", baseTypeCol.Value(i))
+			fmt.Printf("Includes Nuts:   %t\n", includesNutsCol.Value(i))
 
 			if popularityRatingCol.IsNull(i) {
-				log.Println("Popularity:      N/A")
+				fmt.Println("Popularity:      N/A")
 			} else {
-				log.Printf("Popularity:      %d/5 stars", popularityRatingCol.Value(i))
+				fmt.Printf("Popularity:      %d/5 stars\n", popularityRatingCol.Value(i))
 			}
 		}
 		record.Release() // release the current record batch
@@ -73,40 +76,70 @@ func processAndPrintArrowData(arrowData []byte) error {
 	return nil
 }
 
-
 func main() {
 	fmt.Println("Ice Cream Service Client starting...")
-	conn, err := grpc.Dial("localhost:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient("localhost:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Failed to connect to gRPC server: %v", err)
 	}
 	defer conn.Close()
 
-	client := pb.NewIceCreamServiceClient(conn)
+	// 1. Create an Arrow Flight client
+	flightClient := flight.NewFlightServiceClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	flavorsToQuery := []string{"Midnight Chocolate", "Strawberry Sorbet", "Non-Existent Flavor", "Pistachio Gelato", "Mystery Flavor"}
-	request := &pb.GetFlavorDetailsRequest{
+
+	// 2. Prepare the request message that will become the ticket content
+	ticketRequest := &pb.GetFlavorDetailsRequest{
 		Names: flavorsToQuery,
 	}
 
-	log.Printf("Requesting Arrow details for flavors: %v", flavorsToQuery)
-	arrowResponse, err := client.GetFlavorDetailsArrow(ctx, request)
+	// 3. Marshal the request into bytes to create the ticket
+	ticketBytes, err := proto.Marshal(ticketRequest)
 	if err != nil {
-		log.Fatalf("Error calling GetFlavorDetailsArrow: %v", err)
+		log.Fatalf("Failed to marshal ticket request: %v", err)
+	}
+	flightTicket := &flight.Ticket{Ticket: ticketBytes}
+
+	log.Printf("Requesting details for flavors via Flight DoGet: %v", flavorsToQuery)
+
+	// 4. Call the DoGet method with the ticket
+	stream, err := flightClient.DoGet(ctx, flightTicket)
+	if err != nil {
+		log.Fatalf("Error calling Flight DoGet: %v", err)
 	}
 
-	log.Printf("Response from GetFlavorDetailsArrow:")
-	arrowData := arrowResponse.GetArrowData()
+	// 5. Receive data from the DoGet stream
+	// The server sends the entire IPC stream (schema + batches) in one FlightData message
+	// Client collects all DataBody parts
+	var allArrowDataBytes []byte
+	for {
+		data, err := stream.Recv()
+		if err == io.EOF {
+			log.Println("DoGet stream finished.")
+			break // End of stream
+		}
+		if err != nil {
+			log.Fatalf("Error receiving data from DoGet stream: %v", err)
+		}
+		if data.DataBody != nil {
+			allArrowDataBytes = append(allArrowDataBytes, data.DataBody...)
+		}
+		// Note: a Flight server could send schema in data.DataHeader and record batches in data.DataBody.
+		// My server just writes the schema directly into the IPC stream buffer using ipc.WithSchema (so the schema is part of the DataBody content)
+	}
 
-	if len(arrowData) == 0 {
+	log.Printf("Response from DoGet:")
+
+	if len(allArrowDataBytes) == 0 {
 		log.Println("No Arrow data returned.")
 		return
 	}
 
 	// process Arrow data using helper function
-	if err := processAndPrintArrowData(arrowData); err != nil {
+	if err := processAndPrintArrowData(allArrowDataBytes); err != nil {
 		log.Fatalf("Failed to process Arrow data: %v", err)
 	}
 }

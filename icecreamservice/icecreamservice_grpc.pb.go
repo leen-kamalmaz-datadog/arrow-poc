@@ -19,7 +19,6 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	IceCreamService_GetFlavorDetails_FullMethodName      = "/icecreamservice.IceCreamService/GetFlavorDetails"
 	IceCreamService_GetFlavorDetailsArrow_FullMethodName = "/icecreamservice.IceCreamService/GetFlavorDetailsArrow"
 )
 
@@ -27,7 +26,6 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type IceCreamServiceClient interface {
-	GetFlavorDetails(ctx context.Context, in *GetFlavorDetailsRequest, opts ...grpc.CallOption) (*GetFlavorDetailsResponse, error)
 	GetFlavorDetailsArrow(ctx context.Context, in *GetFlavorDetailsRequest, opts ...grpc.CallOption) (*GetFlavorDetailsArrowResponse, error)
 }
 
@@ -37,16 +35,6 @@ type iceCreamServiceClient struct {
 
 func NewIceCreamServiceClient(cc grpc.ClientConnInterface) IceCreamServiceClient {
 	return &iceCreamServiceClient{cc}
-}
-
-func (c *iceCreamServiceClient) GetFlavorDetails(ctx context.Context, in *GetFlavorDetailsRequest, opts ...grpc.CallOption) (*GetFlavorDetailsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetFlavorDetailsResponse)
-	err := c.cc.Invoke(ctx, IceCreamService_GetFlavorDetails_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *iceCreamServiceClient) GetFlavorDetailsArrow(ctx context.Context, in *GetFlavorDetailsRequest, opts ...grpc.CallOption) (*GetFlavorDetailsArrowResponse, error) {
@@ -63,7 +51,6 @@ func (c *iceCreamServiceClient) GetFlavorDetailsArrow(ctx context.Context, in *G
 // All implementations must embed UnimplementedIceCreamServiceServer
 // for forward compatibility.
 type IceCreamServiceServer interface {
-	GetFlavorDetails(context.Context, *GetFlavorDetailsRequest) (*GetFlavorDetailsResponse, error)
 	GetFlavorDetailsArrow(context.Context, *GetFlavorDetailsRequest) (*GetFlavorDetailsArrowResponse, error)
 	mustEmbedUnimplementedIceCreamServiceServer()
 }
@@ -75,9 +62,6 @@ type IceCreamServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedIceCreamServiceServer struct{}
 
-func (UnimplementedIceCreamServiceServer) GetFlavorDetails(context.Context, *GetFlavorDetailsRequest) (*GetFlavorDetailsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetFlavorDetails not implemented")
-}
 func (UnimplementedIceCreamServiceServer) GetFlavorDetailsArrow(context.Context, *GetFlavorDetailsRequest) (*GetFlavorDetailsArrowResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFlavorDetailsArrow not implemented")
 }
@@ -100,24 +84,6 @@ func RegisterIceCreamServiceServer(s grpc.ServiceRegistrar, srv IceCreamServiceS
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&IceCreamService_ServiceDesc, srv)
-}
-
-func _IceCreamService_GetFlavorDetails_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetFlavorDetailsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IceCreamServiceServer).GetFlavorDetails(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: IceCreamService_GetFlavorDetails_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IceCreamServiceServer).GetFlavorDetails(ctx, req.(*GetFlavorDetailsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _IceCreamService_GetFlavorDetailsArrow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -145,10 +111,6 @@ var IceCreamService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "icecreamservice.IceCreamService",
 	HandlerType: (*IceCreamServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "GetFlavorDetails",
-			Handler:    _IceCreamService_GetFlavorDetails_Handler,
-		},
 		{
 			MethodName: "GetFlavorDetailsArrow",
 			Handler:    _IceCreamService_GetFlavorDetailsArrow_Handler,
