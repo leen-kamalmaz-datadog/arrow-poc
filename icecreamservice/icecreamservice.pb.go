@@ -21,104 +21,28 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type FlavorDetail struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Name             string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Description      string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	BaseType         string                 `protobuf:"bytes,3,opt,name=base_type,json=baseType,proto3" json:"base_type,omitempty"`
-	IncludesNuts     bool                   `protobuf:"varint,4,opt,name=includes_nuts,json=includesNuts,proto3" json:"includes_nuts,omitempty"`
-	PopularityRating *int32                 `protobuf:"varint,5,opt,name=popularity_rating,json=popularityRating,proto3,oneof" json:"popularity_rating,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
-}
-
-func (x *FlavorDetail) Reset() {
-	*x = FlavorDetail{}
-	mi := &file_icecreamservice_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *FlavorDetail) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*FlavorDetail) ProtoMessage() {}
-
-func (x *FlavorDetail) ProtoReflect() protoreflect.Message {
-	mi := &file_icecreamservice_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use FlavorDetail.ProtoReflect.Descriptor instead.
-func (*FlavorDetail) Descriptor() ([]byte, []int) {
-	return file_icecreamservice_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *FlavorDetail) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *FlavorDetail) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-func (x *FlavorDetail) GetBaseType() string {
-	if x != nil {
-		return x.BaseType
-	}
-	return ""
-}
-
-func (x *FlavorDetail) GetIncludesNuts() bool {
-	if x != nil {
-		return x.IncludesNuts
-	}
-	return false
-}
-
-func (x *FlavorDetail) GetPopularityRating() int32 {
-	if x != nil && x.PopularityRating != nil {
-		return *x.PopularityRating
-	}
-	return 0
-}
-
-type GetFlavorDetailsRequest struct {
+type FlavorDetailsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Names         []string               `protobuf:"bytes,1,rep,name=names,proto3" json:"names,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetFlavorDetailsRequest) Reset() {
-	*x = GetFlavorDetailsRequest{}
-	mi := &file_icecreamservice_proto_msgTypes[1]
+func (x *FlavorDetailsRequest) Reset() {
+	*x = FlavorDetailsRequest{}
+	mi := &file_icecreamservice_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetFlavorDetailsRequest) String() string {
+func (x *FlavorDetailsRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetFlavorDetailsRequest) ProtoMessage() {}
+func (*FlavorDetailsRequest) ProtoMessage() {}
 
-func (x *GetFlavorDetailsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_icecreamservice_proto_msgTypes[1]
+func (x *FlavorDetailsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_icecreamservice_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -129,58 +53,14 @@ func (x *GetFlavorDetailsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetFlavorDetailsRequest.ProtoReflect.Descriptor instead.
-func (*GetFlavorDetailsRequest) Descriptor() ([]byte, []int) {
-	return file_icecreamservice_proto_rawDescGZIP(), []int{1}
+// Deprecated: Use FlavorDetailsRequest.ProtoReflect.Descriptor instead.
+func (*FlavorDetailsRequest) Descriptor() ([]byte, []int) {
+	return file_icecreamservice_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *GetFlavorDetailsRequest) GetNames() []string {
+func (x *FlavorDetailsRequest) GetNames() []string {
 	if x != nil {
 		return x.Names
-	}
-	return nil
-}
-
-type GetFlavorDetailsArrowResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ArrowData     []byte                 `protobuf:"bytes,1,opt,name=arrow_data,json=arrowData,proto3" json:"arrow_data,omitempty"` // This will hold the serialized Arrow RecordBatch(es)
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetFlavorDetailsArrowResponse) Reset() {
-	*x = GetFlavorDetailsArrowResponse{}
-	mi := &file_icecreamservice_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetFlavorDetailsArrowResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetFlavorDetailsArrowResponse) ProtoMessage() {}
-
-func (x *GetFlavorDetailsArrowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_icecreamservice_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetFlavorDetailsArrowResponse.ProtoReflect.Descriptor instead.
-func (*GetFlavorDetailsArrowResponse) Descriptor() ([]byte, []int) {
-	return file_icecreamservice_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *GetFlavorDetailsArrowResponse) GetArrowData() []byte {
-	if x != nil {
-		return x.ArrowData
 	}
 	return nil
 }
@@ -189,21 +69,9 @@ var File_icecreamservice_proto protoreflect.FileDescriptor
 
 const file_icecreamservice_proto_rawDesc = "" +
 	"\n" +
-	"\x15icecreamservice.proto\x12\x0ficecreamservice\"\xce\x01\n" +
-	"\fFlavorDetail\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x1b\n" +
-	"\tbase_type\x18\x03 \x01(\tR\bbaseType\x12#\n" +
-	"\rincludes_nuts\x18\x04 \x01(\bR\fincludesNuts\x120\n" +
-	"\x11popularity_rating\x18\x05 \x01(\x05H\x00R\x10popularityRating\x88\x01\x01B\x14\n" +
-	"\x12_popularity_rating\"/\n" +
-	"\x17GetFlavorDetailsRequest\x12\x14\n" +
-	"\x05names\x18\x01 \x03(\tR\x05names\">\n" +
-	"\x1dGetFlavorDetailsArrowResponse\x12\x1d\n" +
-	"\n" +
-	"arrow_data\x18\x01 \x01(\fR\tarrowData2\x84\x01\n" +
-	"\x0fIceCreamService\x12q\n" +
-	"\x15GetFlavorDetailsArrow\x12(.icecreamservice.GetFlavorDetailsRequest\x1a..icecreamservice.GetFlavorDetailsArrowResponseB\x1bZ\x19leen-grpc/icecreamserviceb\x06proto3"
+	"\x15icecreamservice.proto\x12\x0ficecreamservice\",\n" +
+	"\x14FlavorDetailsRequest\x12\x14\n" +
+	"\x05names\x18\x01 \x03(\tR\x05namesB\x1bZ\x19leen-grpc/icecreamserviceb\x06proto3"
 
 var (
 	file_icecreamservice_proto_rawDescOnce sync.Once
@@ -217,17 +85,13 @@ func file_icecreamservice_proto_rawDescGZIP() []byte {
 	return file_icecreamservice_proto_rawDescData
 }
 
-var file_icecreamservice_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_icecreamservice_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_icecreamservice_proto_goTypes = []any{
-	(*FlavorDetail)(nil),                  // 0: icecreamservice.FlavorDetail
-	(*GetFlavorDetailsRequest)(nil),       // 1: icecreamservice.GetFlavorDetailsRequest
-	(*GetFlavorDetailsArrowResponse)(nil), // 2: icecreamservice.GetFlavorDetailsArrowResponse
+	(*FlavorDetailsRequest)(nil), // 0: icecreamservice.FlavorDetailsRequest
 }
 var file_icecreamservice_proto_depIdxs = []int32{
-	1, // 0: icecreamservice.IceCreamService.GetFlavorDetailsArrow:input_type -> icecreamservice.GetFlavorDetailsRequest
-	2, // 1: icecreamservice.IceCreamService.GetFlavorDetailsArrow:output_type -> icecreamservice.GetFlavorDetailsArrowResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	0, // [0:0] is the sub-list for method output_type
+	0, // [0:0] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -238,16 +102,15 @@ func file_icecreamservice_proto_init() {
 	if File_icecreamservice_proto != nil {
 		return
 	}
-	file_icecreamservice_proto_msgTypes[0].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_icecreamservice_proto_rawDesc), len(file_icecreamservice_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   1,
 			NumExtensions: 0,
-			NumServices:   1,
+			NumServices:   0,
 		},
 		GoTypes:           file_icecreamservice_proto_goTypes,
 		DependencyIndexes: file_icecreamservice_proto_depIdxs,
