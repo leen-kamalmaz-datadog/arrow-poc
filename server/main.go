@@ -36,8 +36,8 @@ func NewIceCreamServer(db *sql.DB) *iceCreamServer {
 
 func (s *iceCreamServer) DoGet(ticket *flight.Ticket, stream flight.FlightService_DoGetServer) error {
 	// 1. Deserialize the ticket to get flavor names
-	// reuse existing GetFlavorDetailsRequest protobuf message for the ticket content
-	req := &pb.GetFlavorDetailsRequest{}
+	// reuse existing FlavorDetailsRequest protobuf message for the ticket content
+	req := &pb.FlavorDetailsRequest{}
 	if err := proto.Unmarshal(ticket.GetTicket(), req); err != nil {
 		return status.Errorf(codes.InvalidArgument, "DoGet: failed to unmarshal ticket: %v", err)
 	}

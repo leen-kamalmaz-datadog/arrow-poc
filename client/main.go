@@ -92,7 +92,7 @@ func main() {
 	flavorsToQuery := []string{"Midnight Chocolate", "Strawberry Sorbet", "Non-Existent Flavor", "Pistachio Gelato", "Mystery Flavor"}
 
 	// 2. Prepare the request message that will become the ticket content
-	ticketRequest := &pb.GetFlavorDetailsRequest{
+	ticketRequest := &pb.FlavorDetailsRequest{
 		Names: flavorsToQuery,
 	}
 

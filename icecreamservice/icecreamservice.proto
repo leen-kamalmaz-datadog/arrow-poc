@@ -4,8 +4,7 @@ option go_package = "leen-grpc/icecreamservice";
 
 package icecreamservice;
 
-
-message GetFlavorDetailsRequest {
+message FlavorDetailsRequest {
   repeated string names = 1;
 }
 
