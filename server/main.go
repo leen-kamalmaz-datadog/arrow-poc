@@ -14,15 +14,39 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/apache/arrow/go/v16/arrow"
-	"github.com/apache/arrow/go/v16/arrow/array"
-	"github.com/apache/arrow/go/v16/arrow/flight"
-	"github.com/apache/arrow/go/v16/arrow/ipc"
-	"github.com/apache/arrow/go/v16/arrow/memory"
+	"github.com/apache/arrow-go/v18/arrow"
+	"github.com/apache/arrow-go/v18/arrow/array"
+	"github.com/apache/arrow-go/v18/arrow/flight"
+	"github.com/apache/arrow-go/v18/arrow/ipc"
+	"github.com/apache/arrow-go/v18/arrow/memory"
+
 	"github.com/lib/pq"
 
 	pb "leen-grpc/icecreamservice"
 )
+
+var pgToArrowTypeMap = map[string]arrow.DataType{
+	"TEXT":        arrow.BinaryTypes.String,
+	"VARCHAR":     arrow.BinaryTypes.String,
+	"BPCHAR":      arrow.BinaryTypes.String,
+	"CHAR":        arrow.BinaryTypes.String,
+	"NAME":        arrow.BinaryTypes.String,
+	"BOOL":        arrow.FixedWidthTypes.Boolean,
+	"INT2":        arrow.PrimitiveTypes.Int16,                      // smallint
+	"INT4":        arrow.PrimitiveTypes.Int32,                      // integer
+	"INT8":        arrow.PrimitiveTypes.Int64,                      // bigint
+	"FLOAT4":      arrow.PrimitiveTypes.Float32,                    // real
+	"FLOAT8":      arrow.PrimitiveTypes.Float64,                    // double precision
+	"NUMERIC":     &arrow.Decimal128Type{Precision: 38, Scale: 18}, // A reasonable default
+	"DECIMAL":     &arrow.Decimal128Type{Precision: 38, Scale: 18}, // A reasonable default
+	"TIMESTAMP":   &arrow.TimestampType{Unit: arrow.Nanosecond, TimeZone: ""},
+	"TIMESTAMPTZ": &arrow.TimestampType{Unit: arrow.Nanosecond, TimeZone: ""},
+	"DATE":        arrow.PrimitiveTypes.Date32,
+	"BYTEA":       arrow.BinaryTypes.Binary,
+	"JSON":        arrow.BinaryTypes.String, // JSON is treated as a string
+	"JSONB":       arrow.BinaryTypes.String, // JSONB is also treated as a string
+	"UUID":        arrow.BinaryTypes.String,
+}
 
 type iceCreamServer struct {
 	flight.BaseFlightServer // embed BaseFlightServer for default implementations
@@ -49,19 +73,51 @@ func (s *iceCreamServer) DoGet(ticket *flight.Ticket, stream flight.FlightServic
 
 	log.Printf("DoGet: Received request for flavors: %v", flavorNames)
 
-	// 2. Define the Arrow schema based on query results (this can be more dynamic in the future)
-	schema := arrow.NewSchema(
-		[]arrow.Field{
-			{Name: "name", Type: arrow.BinaryTypes.String, Nullable: false},               // name: TEXT -> string
-			{Name: "description", Type: arrow.BinaryTypes.String, Nullable: false},        // description: TEXT -> string
-			{Name: "base_type", Type: arrow.BinaryTypes.String, Nullable: false},          // base_type: TEXT -> string
-			{Name: "includes_nuts", Type: arrow.FixedWidthTypes.Boolean, Nullable: false}, // includes_nuts: BOOLEAN -> bool
-			{Name: "popularity_rating", Type: arrow.PrimitiveTypes.Int32, Nullable: true}, // popularity_rating: INT (nullable) -> int32
-		},
-		nil, // no schema metadata
-	)
+	// 2. Fetch data from PostgreSQL
+	query := `
+        SELECT
+            name,
+            description,
+            base_type,
+            includes_nuts,
+            popularity_rating
+        FROM IceCreamFlavors
+        WHERE name = ANY($1)`
 
-	// 3. Initialize Arrow memory allocator and builders
+	rows, err := s.db.QueryContext(stream.Context(), query, pq.Array(flavorNames)) // executes the SQL query against the database (uses context from stream)
+	if err != nil {
+		log.Printf("DoGet: Database query failed: %v", err)
+		return status.Errorf(codes.Internal, "DoGet: database query failed: %v", err)
+	}
+	defer rows.Close()
+
+	// 3. Define the Arrow schema dynamically based on query results
+
+	// get the column type metadata from the result set
+	columnTypes, err := rows.ColumnTypes()
+	if err != nil {
+		log.Printf("DoGet: Failed to get column types: %v", err)
+		return status.Errorf(codes.Internal, "DoGet: failed to get column types: %v", err)
+	}
+
+	fields := make([]arrow.Field, len(columnTypes))
+	for i, col := range columnTypes {
+		// determine the Arrow data type from the database type name
+		arrowType, ok := pgToArrowTypeMap[col.DatabaseTypeName()]
+		if !ok {
+			return status.Errorf(codes.Internal, "DoGet: %v", fmt.Errorf("unsupported database type: %s", col.DatabaseTypeName()))
+		}
+
+		// create the Arrow Field for this column
+		fields[i] = arrow.Field{
+			Name: col.Name(),
+			Type: arrowType,
+		}
+	}
+
+	schema := arrow.NewSchema(fields, nil)
+
+	// 4. Initialize Arrow memory allocator and builders
 	mem := memory.DefaultAllocator
 
 	builders := make([]array.Builder, len(schema.Fields())) // each element in this slice will be a builder for a specific column
@@ -88,24 +144,6 @@ func (s *iceCreamServer) DoGet(ticket *flight.Ticket, stream flight.FlightServic
 		}
 	}
 
-	// 4. Fetch data from PostgreSQL
-	query := `
-        SELECT
-            name,
-            description,
-            base_type,
-            includes_nuts,
-            popularity_rating
-        FROM IceCreamFlavors
-        WHERE name = ANY($1)`
-
-	rows, err := s.db.QueryContext(stream.Context(), query, pq.Array(flavorNames)) // executes the SQL query against the database (uses context from stream)
-	if err != nil {
-		log.Printf("DoGet: Database query failed: %v", err)
-		return status.Errorf(codes.Internal, "DoGet: database query failed: %v", err)
-	}
-	defer rows.Close()
-
 	// 5. Iterate over rows and populate Arrow builders
 	scanDest := make([]interface{}, len(schema.Fields()))     // to hold pointers to rows.Scan
 	valueHolders := make([]interface{}, len(schema.Fields())) // to hold pointers to the correctly typed Go variables that will receive the data for each column
@@ -119,13 +157,8 @@ func (s *iceCreamServer) DoGet(ticket *flight.Ticket, stream flight.FlightServic
 			var b bool
 			valueHolders[i] = &b // store the address of a bool
 		case arrow.INT32:
-			if field.Nullable { // if the DB column (and therefore Arrow field) can be NULL
-				var ni sql.NullInt32  // use sql.NullInt32 for nullable integers
-				valueHolders[i] = &ni // store the address of a NullInt32
-			} else {
-				var i32 int32
-				valueHolders[i] = &i32 // store the address of an int32
-			}
+			var ni sql.NullInt32  // use sql.NullInt32 for nullable integers
+			valueHolders[i] = &ni // store the address of a NullInt32
 		default:
 			return status.Errorf(codes.Internal, "DoGet: unsupported Arrow type in schema for scan argument setup: %s", field.Type.Name())
 		}
@@ -155,16 +188,11 @@ func (s *iceCreamServer) DoGet(ticket *flight.Ticket, stream flight.FlightServic
 				builder.(*array.BooleanBuilder).Append(val)
 			case arrow.INT32:
 				b := builder.(*array.Int32Builder)
-				if field.Nullable { // if the Arrow field can be NULL
-					sqlVal := *(valuePtr.(*sql.NullInt32))
-					if sqlVal.Valid {
-						b.Append(sqlVal.Int32)
-					} else {
-						b.AppendNull()
-					}
+				sqlVal := *(valuePtr.(*sql.NullInt32))
+				if sqlVal.Valid {
+					b.Append(sqlVal.Int32)
 				} else {
-					val := *(valuePtr.(*int32))
-					b.Append(val)
+					b.AppendNull()
 				}
 			default:
 				return status.Errorf(codes.Internal, "DoGet: unsupported Arrow type for appending data: %s for field %s", field.Type.Name(), field.Name)
