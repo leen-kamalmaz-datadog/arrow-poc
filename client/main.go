@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strings"
 	"time"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/apache/arrow/go/v16/arrow/array"
 	"github.com/apache/arrow/go/v16/arrow/flight"
 
 	"github.com/apache/arrow/go/v16/arrow/ipc"
@@ -20,6 +22,13 @@ import (
 
 	pb "leen-grpc/icecreamservice"
 )
+
+func formatColumnName(s string) string {
+	columnName := strings.ReplaceAll(s, "_", " ")
+	caser := cases.Title(language.English)
+	columnName = caser.String(columnName)
+	return columnName
+}
 
 func processAndPrintArrowData(arrowData []byte) error {
 	mem := memory.DefaultAllocator
@@ -36,29 +45,20 @@ func processAndPrintArrowData(arrowData []byte) error {
 	recordCount := 0
 	for arrowReader.Next() {
 		record := arrowReader.Record()
+		schema := arrowReader.Schema()
+
 		recordCount++
 		fmt.Printf("Processing Arrow RecordBatch %d with %d rows and %d columns.\n", recordCount, record.NumRows(), record.NumCols())
 
-		// expecting schema: name (string), description (string), base_type (string), includes_nuts (bool), popularity_rating (int32, nullable)
-		// can also get the schema dynamically: schema := record.Schema()
-
-		nameCol := record.Column(0).(*array.String)
-		descriptionCol := record.Column(1).(*array.String)
-		baseTypeCol := record.Column(2).(*array.String)
-		includesNutsCol := record.Column(3).(*array.Boolean)
-		popularityRatingCol := record.Column(4).(*array.Int32) // Nullable
-
 		for i := 0; i < int(record.NumRows()); i++ {
 			fmt.Println("------------------------------------")
-			fmt.Printf("Flavor:          %s\n", nameCol.Value(i))
-			fmt.Printf("Description:     %s\n", descriptionCol.Value(i))
-			fmt.Printf("Base Type:       %s\n", baseTypeCol.Value(i))
-			fmt.Printf("Includes Nuts:   %t\n", includesNutsCol.Value(i))
-
-			if popularityRatingCol.IsNull(i) {
-				fmt.Println("Popularity:      N/A")
-			} else {
-				fmt.Printf("Popularity:      %d/5 stars\n", popularityRatingCol.Value(i))
+			for c := 0; c < int(record.NumCols()); c++ {
+				colName := formatColumnName(schema.Fields()[c].Name)
+				if record.Column(c).IsNull(i) {
+					fmt.Printf("%-20s%s\n", colName+":", "N/A")
+				} else {
+					fmt.Printf("%-20s%s\n", colName+":", record.Column(c).ValueStr(i))
+				}
 			}
 		}
 		record.Release() // release the current record batch
