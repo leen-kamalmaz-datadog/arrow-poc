@@ -26,26 +26,10 @@ import (
 )
 
 var pgToArrowTypeMap = map[string]arrow.DataType{
-	"TEXT":        arrow.BinaryTypes.String,
-	"VARCHAR":     arrow.BinaryTypes.String,
-	"BPCHAR":      arrow.BinaryTypes.String,
-	"CHAR":        arrow.BinaryTypes.String,
-	"NAME":        arrow.BinaryTypes.String,
-	"BOOL":        arrow.FixedWidthTypes.Boolean,
-	"INT2":        arrow.PrimitiveTypes.Int16,                      // smallint
-	"INT4":        arrow.PrimitiveTypes.Int32,                      // integer
-	"INT8":        arrow.PrimitiveTypes.Int64,                      // bigint
-	"FLOAT4":      arrow.PrimitiveTypes.Float32,                    // real
-	"FLOAT8":      arrow.PrimitiveTypes.Float64,                    // double precision
-	"NUMERIC":     &arrow.Decimal128Type{Precision: 38, Scale: 18}, // A reasonable default
-	"DECIMAL":     &arrow.Decimal128Type{Precision: 38, Scale: 18}, // A reasonable default
-	"TIMESTAMP":   &arrow.TimestampType{Unit: arrow.Nanosecond, TimeZone: ""},
-	"TIMESTAMPTZ": &arrow.TimestampType{Unit: arrow.Nanosecond, TimeZone: ""},
-	"DATE":        arrow.PrimitiveTypes.Date32,
-	"BYTEA":       arrow.BinaryTypes.Binary,
-	"JSON":        arrow.BinaryTypes.String, // JSON is treated as a string
-	"JSONB":       arrow.BinaryTypes.String, // JSONB is also treated as a string
-	"UUID":        arrow.BinaryTypes.String,
+	"TEXT":    arrow.BinaryTypes.String,
+	"VARCHAR": arrow.BinaryTypes.String,
+	"BOOL":    arrow.FixedWidthTypes.Boolean,
+	"INT4":    arrow.PrimitiveTypes.Int32,
 }
 
 type iceCreamServer struct {
@@ -104,6 +88,8 @@ func (s *iceCreamServer) DoGet(ticket *flight.Ticket, stream flight.FlightServic
 	for i, col := range columnTypes {
 		// determine the Arrow data type from the database type name
 		arrowType, ok := pgToArrowTypeMap[col.DatabaseTypeName()]
+		log.Printf("DatabaseTypeName type: %v", col.DatabaseTypeName())
+		log.Printf("arrow type: %v", arrowType)
 		if !ok {
 			return status.Errorf(codes.Internal, "DoGet: %v", fmt.Errorf("unsupported database type: %s", col.DatabaseTypeName()))
 		}
