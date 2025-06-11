@@ -105,30 +105,8 @@ func (s *iceCreamServer) DoGet(ticket *flight.Ticket, stream flight.FlightServic
 
 	// 4. Initialize Arrow memory allocator and builders
 	mem := memory.DefaultAllocator
-
-	builders := make([]array.Builder, len(schema.Fields())) // each element in this slice will be a builder for a specific column
-	defer func() {                                          // ensure all builders are released before retuning (to prevent memory leaks)
-		for _, b := range builders {
-			if b != nil {
-				b.Release()
-			}
-		}
-	}()
-
-	// create builders dynamically based on the schema
-	for i, field := range schema.Fields() {
-		switch field.Type.ID() { // type identifier
-		case arrow.STRING, arrow.BINARY, arrow.LARGE_STRING, arrow.LARGE_BINARY:
-			builders[i] = array.NewStringBuilder(mem)
-		case arrow.BOOL:
-			builders[i] = array.NewBooleanBuilder(mem)
-		case arrow.INT32:
-			builders[i] = array.NewInt32Builder(mem)
-		// there are more types that can be added, but not needed for this specific POC
-		default:
-			return status.Errorf(codes.Internal, "DoGet: unsupported Arrow type for builder: %s", field.Type.Name())
-		}
-	}
+	recordBuilder := array.NewRecordBuilder(mem, schema)
+	defer recordBuilder.Release()
 
 	// 5. Iterate over rows and populate Arrow builders
 	scanDest := make([]interface{}, len(schema.Fields()))     // to hold pointers to rows.Scan
@@ -162,8 +140,8 @@ func (s *iceCreamServer) DoGet(ticket *flight.Ticket, stream flight.FlightServic
 
 		// dynamically append the scanned values to the correct builders
 		for i, field := range schema.Fields() {
-			builder := builders[i]      // get the Arrow builder for the column
-			valuePtr := valueHolders[i] // get the pointer to the scanned value
+			builder := recordBuilder.Fields()[i] // get the Arrow builder for the column
+			valuePtr := valueHolders[i]          // get the pointer to the scanned value
 
 			switch field.Type.ID() { // type-assert the generic builder and append the scanned data to the correct builder
 			case arrow.STRING, arrow.BINARY, arrow.LARGE_STRING, arrow.LARGE_BINARY:
@@ -193,7 +171,7 @@ func (s *iceCreamServer) DoGet(ticket *flight.Ticket, stream flight.FlightServic
 	}
 
 	// 6. Create Arrow arrays from builders
-	arrowArrays := make([]arrow.Array, len(builders))
+	arrowArrays := make([]arrow.Array, len(recordBuilder.Fields()))
 	defer func() { // ensure all arrays are released
 		for _, arr := range arrowArrays {
 			if arr != nil {
@@ -201,7 +179,7 @@ func (s *iceCreamServer) DoGet(ticket *flight.Ticket, stream flight.FlightServic
 			}
 		}
 	}()
-	for i, b := range builders {
+	for i, b := range recordBuilder.Fields() {
 		arrowArrays[i] = b.NewArray()
 	}
 
